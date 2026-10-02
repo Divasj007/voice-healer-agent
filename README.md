@@ -1,195 +1,411 @@
-# voice-healer-agent
+<h1 align="center">🎙️ Voice Healer</h1>
 
-**Voice-Controlled Terminal Agent + Self-Healing Code Harness**
-A local-first developer tool for Hacktoberfest / MLH-style open-source AI challenges.
+<p align="center">
+  <strong>Offline Voice-Controlled Developer Agent + Self-Healing Code Harness</strong>
+</p>
 
-## What it does
+<p align="center">
+  Turn developer commands into local actions, diagnose Python failures with a local AI model,
+  review the proposed repair, and verify the result automatically.
+</p>
 
-`voice-healer-agent` turns a spoken developer command into a local action and gives Python programs a self-healing execution loop.
+<p align="center">
+  <a href="https://github.com/Divasj007/voice-healer-agent/actions">
+    <img src="https://github.com/Divasj007/voice-healer-agent/actions/workflows/ci.yml/badge.svg" alt="CI">
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.11%2B-blue" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/Ollama-Local%20AI-black" alt="Ollama">
+  <img src="https://img.shields.io/badge/Agent%20Skills-compatible-purple" alt="Agent Skills">
+  <img src="https://img.shields.io/badge/Tests-124%20passing-success" alt="124 tests passing">
+  <img src="https://img.shields.io/github/license/Divasj007/voice-healer-agent" alt="MIT License">
+</p>
 
-The stack is designed to stay local after setup:
+---
 
-- **Speech-to-text:** `faster-whisper` with the CPU INT8 `tiny` model.
-- **Text-to-speech:** `pyttsx3`.
-- **Microphone capture:** `SpeechRecognition` + `PyAudio`.
-- **Code repair:** Ollama REST API at `http://localhost:11434/api/generate`.
-- **Coding model:** `qwen2.5-coder:1.5b`.
-- **Execution:** Python subprocesses with bounded timeouts.
-- **Safety:** failing source is backed up, model output is syntax-checked, statically scanned by a Safety Guard, patched atomically, and re-verified.
-- **Developer workflow:** a local Git pre-commit hook can verify staged Python test files through the same harness.
-- **Repair evidence:** the web Lab exposes a unified backup-to-current diff after each repair, making the generated change auditable before a demo or commit.
-- **System Doctor:** a read-only local preflight checks Python, Ollama/model availability, Agent Skill files, optional voice dependencies, the Git hook, and the demo fixture.
-- **Safety Guard:** AI-generated candidates are statically checked for newly introduced high-risk operations before approval or automatic application.
+## ✨ What is Voice Healer?
 
-The project uses the portable [Agent Skills](https://agentskills.io/) directory format. `skills/voice-healer/SKILL.md` contains the standard YAML frontmatter and agent instructions.
+**Voice Healer** is a local-first developer tool that combines:
 
-> **Offline boundary:** installation and the first model downloads require network access. Once dependencies, the Whisper model, Ollama, and the Ollama coding model are present locally, the core runtime does not need a cloud API.
+- 🎙️ Voice-controlled developer commands
+- 🧠 Local AI-powered Python repair
+- 🛡️ Static safety checks for generated patches
+- 🔍 Human-readable repair diffs
+- ✅ Automatic verification after every repair
+- 🧾 Local repair history and audit information
+- 🩺 A read-only System Doctor
+- 🔗 Git pre-commit self-healing integration
+- 🌐 A dependency-free local browser UI
+- 📦 Portable [Agent Skills](https://agentskills.io/) packaging
 
-## Architecture
+The goal is simple:
 
-```mermaid
-flowchart TD
-    U[Developer] --> V[Voice / CLI Command]
-    V --> L[listen_command.py]
-    L --> W[Whisper tiny CPU INT8]
-    L --> T[pyttsx3 local TTS]
-    W --> M[main.py Orchestrator]
-    M --> H[heal_code.py]
-    M --> G[Safe Local Git Actions]
-    H --> X[Python Subprocess]
-    X -->|stderr traceback| H
-    H --> O[Ollama REST API]
-    O --> Q[qwen2.5-coder:1.5b]
-    Q --> H
-    H --> P[Validate + Atomic Patch]
-    P --> X
-    G --> C[Git Pre-Commit Hook]
-    C --> H
-```
+> **When code breaks, Voice Healer should help diagnose it, propose a safe repair, and prove that the repaired program actually runs.**
 
-## Repository layout
+After setup, the core AI and speech workflow runs locally. No cloud coding API is required for normal operation.
+
+---
+
+## 🚀 Why Voice Healer?
+
+Traditional debugging usually looks like:
 
 ```text
-voice-healer-agent/
-├── LICENSE
-├── README.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── CODE_OF_CONDUCT.md
-├── requirements.txt
-├── sample_bug.py
-├── fixtures/sample_bug.py
-├── hooks/
-│   ├── pre-commit
-│   ├── install.ps1
-│   └── install.sh
-├── tests/
-│   ├── test_audit.py
-│   ├── test_approval.py
-│   ├── test_doctor.py
-│   ├── test_heal_code.py
-│   ├── test_lifecycle.py
-│   ├── test_main.py
-│   ├── test_project_quality.py
-│   ├── test_safety_guard.py
-│   ├── test_safety_guard_http.py
-│   ├── test_safety_guard_integration.py
-│   └── test_ui_server.py
-├── .github/
-│   ├── workflows/ci.yml
-│   └── ISSUE_TEMPLATE/
-└── skills/
-    └── voice-healer/
-        ├── SKILL.md
-        └── scripts/
-            ├── audit.py
-            ├── approval.py
-            ├── doctor.py
-            ├── heal_code.py
-            ├── lifecycle.py
-            ├── listen_command.py
-            ├── main.py
-            ├── safety_guard.py
-            └── ui_server.py
-└── ui/
-    ├── index.html
-    ├── app.js
-    └── styles.css
+Code
+  ↓
+Error
+  ↓
+Read traceback
+  ↓
+Search / reason about the problem
+  ↓
+Edit code
+  ↓
+Run again
+  ↓
+Repeat
 ```
 
-### Important GitHub note
+Voice Healer turns that into a local automated loop:
 
-Git does not normally track `.git/hooks/`. The included tracked hook source and installers are what should be distributed. The extracted ZIP may also contain a local `.git/hooks/pre-commit` convenience copy, but a normal GitHub clone gets the tracked `hooks/pre-commit` file instead and should run an installer once. A fresh GitHub clone must recreate the hook locally or configure a tracked hook directory before relying on automatic pre-commit healing.
-
-## Requirements
-
-- Python 3.11 or newer.
-- A working microphone for voice input.
-- A local Ollama installation for code healing.
-- Enough RAM/CPU for local Whisper and the selected Ollama model.
-- PortAudio may be required by PyAudio on systems where a binary wheel is unavailable.
-
-The current requirements file pins `faster-whisper` 1.2.1, compatible PyAV `av` 18.1.0, `pyttsx3` 2.99, `SpeechRecognition` 3.17.0, and `PyAudio` 0.2.14. `faster-whisper` supports Python 3.11+ and its CPU INT8 configuration is documented upstream. SpeechRecognition documents PyAudio as the microphone dependency. See the project pages for platform-specific installation details.
-
-## Setup
-
-### 1. Create a virtual environment
-
-Linux/macOS:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+```text
+Developer command
+      ↓
+Voice / CLI parser
+      ↓
+Run Python program
+      ↓
+Capture traceback
+      ↓
+Local Ollama model
+      ↓
+Generate repair candidate
+      ↓
+Safety Guard
+      ↓
+Syntax validation
+      ↓
+Apply patch
+      ↓
+Run again
+      ↓
+✅ Verified
 ```
 
-Windows PowerShell:
+The important part is that a repair is not considered successful merely because an AI model generated code.
 
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
+**The patched program must execute successfully.**
 
-If `PyAudio` needs a native PortAudio dependency on your platform, install PortAudio with your operating system package manager and rerun the Python dependency install.
+---
 
-### 2. Prepare Ollama
+# 🎯 Core Features
 
-Start the local Ollama service, then pull the required coding model:
+| Feature | What it does |
+|---|---|
+| 🎙️ Voice Commands | Control supported developer actions using your microphone |
+| 💻 CLI Mode | Run the same workflow without microphone hardware |
+| 🧠 Local AI | Uses Ollama and `qwen2.5-coder:1.5b` locally |
+| 🔧 Self-Healing | Uses real Python tracebacks to generate repair candidates |
+| 🛡️ Safety Guard | Detects newly introduced high-risk operations |
+| 👀 Safe Patch Review | Review a proposed repair before applying it |
+| 🔍 Repair Diff | Compare original backup with the repaired source |
+| 🧾 Repair History | Keep local audit information for previous repairs |
+| 🩺 System Doctor | Check local setup without modifying source code |
+| 🔗 Git Hook | Run self-healing verification during selected commits |
+| 🌐 Web Lab | Inspect, run, propose, approve, reject, and reset repairs |
+| 📦 Agent Skill | Ships as a portable Agent Skills package |
+| ✅ Automated Tests | Dependency-light unit and integration test suite |
+| 🔒 Local-first | Designed around local execution and localhost AI inference |
 
-```bash
-ollama serve
-ollama pull qwen2.5-coder:1.5b
-```
+---
 
-You can confirm the model is available with:
+# 🎥 The Demo
 
-```bash
-ollama list
-```
+Voice Healer includes a deliberately broken Python program so the complete workflow can be demonstrated quickly.
 
-The harness calls the Ollama REST endpoint directly with Python's standard-library `urllib`; no Ollama Python SDK is required.
-
-### 3. Run the deliberate bug
+### 1. Run the broken program
 
 ```bash
 python sample_bug.py
 ```
 
-You should get a runtime `TypeError` because the sample concatenates a string with an integer.
+You should see a `TypeError`.
 
-### 4. Heal it
+### 2. Ask Voice Healer to repair it
+
+Using the CLI:
 
 ```bash
 python skills/voice-healer/scripts/heal_code.py sample_bug.py
 ```
 
-The harness will:
+Or through the command agent:
 
-1. Execute the file.
-2. Capture the traceback.
-3. Create `sample_bug.py.bak`.
-4. Ask local `qwen2.5-coder:1.5b` for a complete repair.
-5. Strip Markdown fences if the model returns them.
-6. Parse the candidate with Python's AST parser.
-7. Write the patch atomically.
-8. Execute the file again.
-9. Restore the original source if all repair attempts fail.
+```bash
+python skills/voice-healer/scripts/main.py --command "heal sample_bug.py"
+```
 
-After a successful demo, rerun:
+Or start the interactive voice agent:
+
+```bash
+python skills/voice-healer/scripts/main.py
+```
+
+Then say:
+
+```text
+heal sample_bug.py
+```
+
+### 3. Watch the repair process
+
+The harness:
+
+```text
+1. Runs the Python program
+2. Captures the traceback
+3. Creates a .bak backup
+4. Sends the failure context to local Ollama
+5. Receives a repair candidate
+6. Validates the candidate
+7. Runs the Safety Guard
+8. Applies the repair atomically
+9. Runs the program again
+10. Reports success only after verification
+```
+
+### 4. Verify the repaired program
 
 ```bash
 python sample_bug.py
 ```
 
+The program should now execute successfully.
 
-### Timing and trace behavior
+---
 
-The Lab header shows measured wall-clock duration for the current operation (`Run`, `Proposal`, `Apply`, `Reject`, or `Reset`). These values come from the local Python server using a monotonic timer around the operation; they are not generated or randomized. The Overview page contains an explicitly illustrative replay animation for presentation purposes and is not a live execution trace.
+# 🏗️ Architecture
 
-## Voice agent
+```mermaid
+flowchart TD
+    A[Developer] --> B[Voice / CLI Command]
+
+    B --> C[Command Parser]
+    C --> D[main.py]
+
+    D --> E[Run Python File]
+    E --> F{Program succeeds?}
+
+    F -->|Yes| G[✅ Done]
+    F -->|No| H[Capture Traceback]
+
+    H --> I[heal_code.py]
+    I --> J[Local Ollama]
+    J --> K[qwen2.5-coder:1.5b]
+
+    K --> L[Repair Candidate]
+    L --> M[Syntax Validation]
+    M --> N[Safety Guard]
+
+    N -->|Blocked| O[Reject Candidate]
+    N -->|Allowed| P[Apply Patch]
+
+    P --> E
+
+    D --> Q[Git Actions]
+    Q --> R[Pre-Commit Hook]
+    R --> I
+
+    D --> S[Local Web UI]
+    S --> I
+```
+
+---
+
+# 🧩 Open-Source Stack
+
+Voice Healer is built from open-source components and local developer tooling.
+
+| Technology | Role |
+|---|---|
+| **Python** | Core runtime and orchestration |
+| **Ollama** | Local model runtime |
+| **Qwen2.5-Coder** | Local code-repair model |
+| **faster-whisper** | Local speech-to-text |
+| **SpeechRecognition** | Microphone input layer |
+| **PyAudio** | Audio capture |
+| **pyttsx3** | Local text-to-speech |
+| **Agent Skills** | Portable skill packaging |
+| **Git** | Developer workflow integration |
+| **HTML / CSS / JavaScript** | Local browser interface |
+
+---
+
+# 🔐 Local-First & Privacy
+
+Voice Healer is designed around local execution.
+
+After setup:
+
+- Speech recognition runs locally.
+- Text-to-speech runs locally.
+- Code repair uses a local Ollama endpoint.
+- Python programs execute locally.
+- Repair history is stored locally.
+- The browser interface communicates with the local Python server.
+- No cloud coding API is required for normal operation.
+
+### Important offline boundary
+
+Installing Python dependencies and downloading model files require network access.
+
+Once the required dependencies and local models are installed, the core runtime can operate without a cloud AI service.
+
+The default Ollama endpoint is:
+
+```text
+http://localhost:11434/api/generate
+```
+
+The project restricts AI inference to loopback/local endpoints.
+
+---
+
+# 🛡️ Safety Guard
+
+AI-generated code should not automatically be trusted.
+
+Voice Healer therefore checks repair candidates before applying them.
+
+The Safety Guard looks for newly introduced high-risk operations such as:
+
+- Shell or subprocess execution
+- Network access
+- Credential or secret-environment access
+- Dynamic code execution
+- Destructive file deletion
+- Unsafe pickle deserialization
+- Native-code loading
+- Absolute-path or traversal writes
+
+Ordinary filesystem writes and permission changes can be reported as review warnings rather than automatically blocked.
+
+### Approval workflow
+
+The browser Lab supports:
+
+```text
+Run
+ ↓
+Analyze
+ ↓
+Propose Repair
+ ↓
+Review Diff + Safety Result
+ ↓
+Approve & Apply
+          OR
+Reject
+ ↓
+Verify
+```
+
+A proposed repair is also protected by a source hash check. If the target file changes after the proposal is created, the proposal must be regenerated.
+
+---
+
+# 🔍 Auditable Repairs
+
+Every repair starts from the actual program and its observed failure.
+
+Before the first repair attempt, the original file is preserved as:
+
+```text
+sample_bug.py.bak
+```
+
+The workflow can then expose:
+
+- Original source
+- Proposed change
+- Unified diff
+- Repair status
+- Model used
+- Number of attempts
+- Timing information
+- Return code
+- Source hashes
+- Repair history
+
+The audit trail does not intentionally store source code or model prompts.
+
+---
+
+# 🌐 Local Web UI
+
+Voice Healer also includes a dependency-free local browser interface.
+
+Start it with:
+
+### Windows
+
+```powershell
+python skills/voice-healer/scripts/ui_server.py --open
+```
+
+Or:
+
+```text
+run_ui.bat
+```
+
+### Linux / macOS
+
+```bash
+python skills/voice-healer/scripts/ui_server.py --open
+```
+
+The UI provides:
+
+```text
+Overview
+Lab
+Source
+Skill
+History
+Doctor
+```
+
+### Lab
+
+The Lab is the main interactive repair workspace.
+
+It can:
+
+- Run the target
+- Propose a repair
+- Review the generated diff
+- Show Safety Guard results
+- Approve and apply a repair
+- Reject a proposal
+- Reset the demo
+
+### History
+
+History records local repair events including status, target, model, attempts, timing, return codes, and source hashes.
+
+### Doctor
+
+Doctor performs a read-only preflight of the local environment.
+
+### Important
+
+The browser UI is a local control interface over the same Python healing backend.
+
+The microphone voice path remains available through the terminal voice agent.
+
+---
+
+# 🎙️ Voice Agent
 
 Start the full voice loop:
 
@@ -197,13 +413,13 @@ Start the full voice loop:
 python skills/voice-healer/scripts/main.py
 ```
 
-For a deterministic terminal-only mode:
+For deterministic terminal-only operation:
 
 ```bash
 python skills/voice-healer/scripts/main.py --cli
 ```
 
-To run one command without entering a loop:
+To execute one command directly:
 
 ```bash
 python skills/voice-healer/scripts/main.py --command "heal sample_bug.py"
@@ -225,35 +441,63 @@ help
 quit
 ```
 
-The voice parser intentionally does not expose arbitrary shell commands, Git push, reset, checkout, rebase, or remote administration.
+The command parser intentionally does **not** expose arbitrary shell execution or remote Git administration through voice commands.
 
+---
 
-## System Doctor
+# 🩺 System Doctor
 
-Run a read-only local preflight before a demo or repair session:
+Run:
 
 ```bash
 python skills/voice-healer/scripts/doctor.py
 ```
 
-The doctor checks the Python version, core project files, Agent Skill metadata, Ollama reachability and the required `qwen2.5-coder:1.5b` model, optional voice packages, Git/hook setup, and the tracked broken demo fixture. It does not modify source code. The CLI agent also accepts `doctor`, `diagnose`, `check setup`, and `system check`. The browser exposes the same report under the **Doctor** view.
+Doctor performs a read-only local preflight covering things such as:
 
+- Python environment
+- Required project files
+- Agent Skill metadata
+- Ollama availability
+- Required model availability
+- Optional voice dependencies
+- Git configuration
+- Pre-commit hook setup
+- Demo fixture
 
-## Safety Guard
+It does not modify your source code.
 
-AI-generated repair candidates are inspected before an interactive approval can apply them. The guard compares the candidate with the current source and reports only risks newly introduced by the patch, reducing noise from legacy code while still blocking high-risk additions.
+---
 
-Blocked categories include shell/subprocess execution, network access, credential or secret-environment access, dynamic code execution, destructive file deletion, unsafe pickle deserialization, native-code loading, and writes to absolute or traversal paths. Ordinary new filesystem writes or permission changes are reported as review warnings rather than automatically blocked.
+# 🔗 Git Pre-Commit Self-Healing
 
-The approval UI shows the guard result beside the diff. A blocked proposal remains reviewable for inspection but its **Approve & apply** action is disabled. The backend repeats the safety scan during approval, so the guard cannot be bypassed by changing the pending payload or calling the approval endpoint directly.
+Voice Healer can integrate into Git through a pre-commit hook.
 
-The automatic healer also runs the same guard before it writes a model-generated candidate. A blocked candidate is discarded and the original backup is restored if no safe repair remains.
+The tracked hook source lives here:
 
-## Git pre-commit demo
+```text
+hooks/pre-commit
+```
 
-The hook checks staged files that look like Python tests (`tests/*.py`, `test_*.py`, or `*_test.py`). If a test fails, the same self-healing harness is invoked before Git accepts the commit.
+Install it after cloning.
 
-For a quick live demo:
+### Windows
+
+```powershell
+.\hooks\install.ps1
+```
+
+### Linux / macOS
+
+```bash
+bash hooks/install.sh
+```
+
+The installed hook checks staged Python test files.
+
+If one of the selected staged tests fails, the same self-healing harness can attempt to diagnose and repair the failure before Git accepts the commit.
+
+### Demo
 
 ```bash
 cp sample_bug.py test_sample_bug.py
@@ -261,175 +505,626 @@ git add test_sample_bug.py
 git commit -m "demo self healing"
 ```
 
-The hook detects `test_sample_bug.py`, runs the local healer, re-stages the repaired file when needed, and blocks the commit if verification cannot succeed.
+The hook can detect the staged test file, run the repair workflow, re-stage a verified repair when appropriate, and block the commit when verification cannot succeed.
 
-For a GitHub-distributed project, remember that Git excludes `.git/hooks/` from normal commits and clones. This challenge artifact includes the hook directly in its local `.git/hooks/` path; when distributing through GitHub, keep a tracked copy or installer outside `.git/hooks/` and install it into `.git/hooks/` after cloning.
+> Git does not normally version `.git/hooks/`, which is why this repository includes a tracked hook source and installation scripts.
 
-## Live Hackathon demo script
+---
 
-### 90-second story
+# 🤖 What Happens During Healing?
 
-**1. Show the bug.**
-
-```text
-$ python sample_bug.py
-TypeError: can only concatenate str (not "int") to str
-```
-
-**2. Ask the agent to heal it.**
-
-Say:
+A simplified repair looks like this:
 
 ```text
-"heal sample_bug.py"
+Python program
+      ↓
+Runtime failure
+      ↓
+Traceback captured
+      ↓
+Original source backed up
+      ↓
+Ollama receives local repair request
+      ↓
+Qwen2.5-Coder generates candidate
+      ↓
+Candidate syntax checked
+      ↓
+Safety Guard checks candidate
+      ↓
+Candidate written atomically
+      ↓
+Program executes again
+      ↓
+┌─────────────────────────┐
+│ Verification successful │
+│          ✅             │
+└─────────────────────────┘
 ```
 
-or run:
+When all configured repair attempts fail:
+
+```text
+Candidate rejected
+      ↓
+Original source restored
+      ↓
+Non-zero result
+      ↓
+Commit / workflow blocked
+```
+
+---
+
+# 📁 Project Structure
+
+```text
+voice-healer-agent/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
+│   ├── pull_request_template.md
+│   └── workflows/
+│       └── ci.yml
+│
+├── fixtures/
+│   └── sample_bug.py
+│
+├── hooks/
+│   ├── pre-commit
+│   ├── install.ps1
+│   └── install.sh
+│
+├── skills/
+│   └── voice-healer/
+│       ├── SKILL.md
+│       └── scripts/
+│           ├── approval.py
+│           ├── audit.py
+│           ├── doctor.py
+│           ├── heal_code.py
+│           ├── lifecycle.py
+│           ├── listen_command.py
+│           ├── local_endpoint.py
+│           ├── main.py
+│           ├── safety_guard.py
+│           └── ui_server.py
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_approval.py
+│   ├── test_audit.py
+│   ├── test_doctor.py
+│   ├── test_heal_code.py
+│   ├── test_lifecycle.py
+│   ├── test_listen_command.py
+│   ├── test_local_endpoint.py
+│   ├── test_main.py
+│   ├── test_project_quality.py
+│   ├── test_safety_guard.py
+│   ├── test_safety_guard_http.py
+│   ├── test_safety_guard_integration.py
+│   └── test_ui_server.py
+│
+├── ui/
+│   ├── app.js
+│   ├── index.html
+│   └── styles.css
+│
+├── CONTRIBUTING.md
+├── CODE_OF_CONDUCT.md
+├── LICENSE
+├── README.md
+├── SECURITY.md
+├── requirements.txt
+├── run_ui.bat
+├── run_ui.ps1
+├── sample_bug.py
+└── ...
+```
+
+---
+
+# ⚙️ Requirements
+
+- Python 3.11+
+- A local Ollama installation
+- The `qwen2.5-coder:1.5b` model
+- A working microphone for voice mode
+- Sufficient CPU/RAM for local Whisper and the selected coding model
+
+The project pins its primary Python dependencies in:
+
+```text
+requirements.txt
+```
+
+The voice dependencies include:
+
+```text
+faster-whisper
+SpeechRecognition
+PyAudio
+pyttsx3
+```
+
+---
+
+# 👤 Using Your Own Python Project
+
+Voice Healer does **not** require your Python file to be placed in a special folder.
+
+Your target Python file can be anywhere **inside the cloned `voice-healer-agent` repository**.
+
+For example:
+
+```text
+voice-healer-agent/
+├── my_app.py
+├── projects/
+│   └── calculator.py
+├── skills/
+│   └── voice-healer/
+│       └── scripts/
+└── ...
+```
+
+You can then heal a file directly:
 
 ```bash
-python skills/voice-healer/scripts/main.py --command "heal sample_bug.py"
+python skills/voice-healer/scripts/main.py --command "heal my_app.py"
 ```
 
-**3. Point out the local AI boundary.**
-
-The terminal shows `[Ollama]` and the model name `qwen2.5-coder:1.5b`. The repair request goes to localhost rather than a hosted coding service.
-
-**4. Prove the repair.**
+Or a file in a subfolder:
 
 ```bash
-python sample_bug.py
+python skills/voice-healer/scripts/main.py --command "heal projects/calculator.py"
 ```
 
-The harness only reports success after executing the patched program successfully.
+You can also start the interactive voice agent:
 
-**5. Show the Git gate.**
+```bash
+python skills/voice-healer/scripts/main.py
+```
 
-Create a staged test file from the bug, commit it, and let the pre-commit hook invoke the same healing loop.
+Then say:
 
-### Suggested narration
+```text
+heal projects/calculator.py
+```
 
-> "This is a developer agent that hears a local command, turns it into a deterministic action, and when Python fails it captures the actual traceback. Instead of sending source code to a cloud service, it sends the source and diagnostics to a local Ollama model. The patch is syntax-checked, written atomically, then executed again. The commit hook makes that same self-healing check part of the developer workflow."
+### Important path rule
 
-## Automated checks
+When using the main Voice Healer orchestrator, the target must:
 
-The repository ships a dependency-light test suite that runs without microphone hardware and without Ollama. CI checks supported Python versions, Python compilation, unit/integration tests, shell syntax, browser JavaScript syntax, and required project files. The UI Lab also renders a unified diff between the preserved `.bak` source and the current source after a repair.
+- Be a Python file (`.py`)
+- Exist inside the cloned repository
+- Not point outside the repository
 
-Run locally:
+This restriction is intentional and prevents the orchestrator from modifying arbitrary files elsewhere on the computer.
+
+---
+
+## ✅ First-Time Setup at a Glance
+
+A new user only needs to do this once:
+
+```text
+1. Clone Voice Healer
+        ↓
+2. Create a Python virtual environment
+        ↓
+3. Install requirements.txt
+        ↓
+4. Install Ollama
+        ↓
+5. Pull qwen2.5-coder:1.5b
+        ↓
+6. Put your Python project/file inside the repository
+        ↓
+7. Run Voice Healer against the target file
+```
+
+For the first test, use the included `sample_bug.py`.
+
+# 🚀 Installation
+
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/Divasj007/voice-healer-agent.git
+cd voice-healer-agent
+```
+
+## 2. Create a virtual environment
+
+### Windows PowerShell
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+### Linux / macOS
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+If PyAudio requires a native PortAudio installation on your platform, install the appropriate PortAudio package for your operating system and rerun the dependency installation.
+
+---
+
+# 🧠 Set Up Ollama
+
+### 1. Install Ollama
+
+Install the Ollama application separately from the project repository, then start the local service:
+
+```bash
+ollama serve
+```
+
+### 2. Download the local coding model
+
+The AI model is **not bundled inside this GitHub repository**. Voice Healer uses Ollama to run the model locally.
+
+Download the model once:
+
+```bash
+ollama pull qwen2.5-coder:1.5b
+```
+
+Check that it is available:
+
+```bash
+ollama list
+```
+
+You should see:
+
+```text
+qwen2.5-coder:1.5b
+```
+
+After Ollama and the model are installed, code-repair inference runs locally through Ollama. No cloud coding API is required for the normal healing workflow.
+
+Voice Healer communicates with Ollama through its local REST API using Python's standard library.
+
+No Ollama Python SDK is required.
+
+---
+
+# 🧪 Run the Test Suite
+
+The project contains a dependency-light automated test suite.
+
+Run:
 
 ```bash
 python -m unittest discover -s tests -v
+```
+
+The **v1.0.0 release** was verified with:
+
+```text
+124 tests passing
+```
+
+The tests are designed so the core suite can run without:
+
+- Microphone hardware
+- A running LLM
+- Cloud AI services
+
+Additional local checks:
+
+```bash
 bash -n hooks/pre-commit hooks/install.sh
 node --check ui/app.js
 ```
 
-The healing tests use a localhost-compatible test HTTP server for the Ollama API contract, so CI never needs to download or run an LLM.
+The healing tests use a local test HTTP server for the Ollama API contract, so CI does not need to download or run an LLM.
 
-## Agent Skills compliance
+---
 
-The skill follows the current Agent Skills specification structure:
+# 📦 Agent Skills
 
-- `skills/voice-healer/SKILL.md` is the required skill manifest.
-- `name` is lowercase and matches the skill directory name.
-- `description` explains both capability and activation triggers.
-- `compatibility` documents the local environment requirements.
-- Executable implementation is bundled under `skills/voice-healer/scripts/`.
+Voice Healer ships with a portable Agent Skills package:
 
-Validate the skill with the reference validator when it is installed:
+```text
+skills/voice-healer/SKILL.md
+```
+
+The skill contains standard metadata including:
+
+- `name`
+- `description`
+- `compatibility`
+
+Implementation scripts are bundled inside:
+
+```text
+skills/voice-healer/scripts/
+```
+
+When the reference validator is installed:
 
 ```bash
 skills-ref validate skills/voice-healer
 ```
 
-## Design goals
+---
 
-### Local-first
+# ⏱️ Repair Lifecycle
 
-No cloud speech recognition or cloud code-generation API is required for normal operation after setup.
+The browser Lab represents the repair lifecycle explicitly.
 
-### Auditable repairs
-
-Every repair is grounded in the actual source and observed stderr. The original source is retained as a `.bak` backup before the first patch attempt.
-
-### Fail closed
-
-Invalid Python returned by the model is rejected. A successful repair must execute successfully. If all configured attempts fail, the original file is restored and a non-zero status blocks the Git commit.
-
-### Hackathon-friendly
-
-The project is intentionally small, readable, and demoable from a terminal. All core integration points are easy to inspect: microphone capture, local inference, subprocess execution, patch validation, and Git lifecycle integration.
-
-## Lab lifecycle behavior
-
-The interactive Lab uses a fresh lifecycle session each time the local UI server starts. Previous repair events remain available in History, but they do not pre-populate the current Lab with completed stages. `Reset Demo` starts a new cycle, clears any pending interactive proposal, and returns the Lab lifecycle to Idle.
-
-Rejecting a proposal updates the lifecycle immediately. Terminal branches are explicit: a successful approval ends in `Verified`, a user rejection ends in `Rejected`, and an applied patch that fails verification ends in `Restored`; branches that were not taken are shown as skipped rather than pending.
-
-## Troubleshooting
-
-### "PyAudio is unavailable"
-
-Use `--cli` to test the entire orchestrator without microphone hardware. For voice mode, install a compatible PyAudio build and make sure the operating system sees a usable microphone.
-
-### "Whisper unavailable"
-
-Install `faster-whisper` from `requirements.txt`. The first model load may download the model files; subsequent runs use the local cache.
-
-### "Ollama is unreachable"
-
-Start the local Ollama service and verify that `qwen2.5-coder:1.5b` appears in `ollama list`. The harness defaults to `http://localhost:11434/api/generate`, and you can set `OLLAMA_API_URL` when using a different loopback endpoint.
-
-### The repair keeps failing
-
-Open the `.bak` file to inspect the original source and the terminal traceback. The harness intentionally restores the original program after the configured repair attempts fail.
-
-## License
-
-MIT. See `LICENSE`.
-
-## Local web UI
-
-Voice Healer includes a dependency-free local web interface under `ui/`. The UI is a thin client over the same Python self-healing harness used by the CLI; it does not use a second or simulated AI backend.
-
-Windows PowerShell:
-
-```powershell
-python skills/voice-healer/scripts/ui_server.py --open
-```
-
-Or double-click/run:
+A normal successful repair can move through:
 
 ```text
-run_ui.bat
+Idle
+ ↓
+Running
+ ↓
+Analyzing
+ ↓
+Proposed
+ ↓
+Awaiting Approval
+ ↓
+Applying
+ ↓
+Verifying
+ ↓
+Verified
 ```
 
-Linux/macOS:
+Other terminal states include:
+
+```text
+Rejected
+Restored
+```
+
+When an operation takes a branch that is not used, the Lab displays it as skipped rather than leaving it in a misleading pending state.
+
+The current operation timing shown in the Lab is measured locally using a monotonic timer.
+
+---
+
+# 🧭 Design Principles
+
+## Local-first
+
+Normal operation does not require a cloud speech or cloud code-generation service.
+
+## Fail closed
+
+Invalid Python is rejected.
+
+A successful repair must execute successfully.
+
+If configured repair attempts fail, the original source is restored.
+
+## Auditable
+
+Repairs are based on actual source code and real runtime diagnostics.
+
+The original source is preserved before repair attempts.
+
+## Safe-by-default
+
+Generated candidates pass static safety checks before automatic application or interactive approval.
+
+## Hackathon-friendly
+
+The project is intentionally designed to be:
+
+- Easy to run
+- Easy to inspect
+- Easy to demonstrate
+- Easy to test
+- Easy to extend
+
+---
+
+# 🎬 90-Second Hackathon Demo
+
+### Step 1 — Show the bug
 
 ```bash
-python skills/voice-healer/scripts/ui_server.py --open
+python sample_bug.py
 ```
 
-The server binds only to a loopback host (`127.0.0.1`, `localhost`, or `::1`) and uses `127.0.0.1:8000` by default. Non-loopback bind addresses are rejected. It exposes only repository-bound operations: inspect Python files, run a target, heal a target through `heal_code.py`, and reset the demo file from its `.bak`. It does not execute arbitrary shell commands from browser input.
+Show the runtime error.
 
-The UI contains Overview, Lab, Source, Skill, History, and Doctor views. The Lab's **Run**, **Heal**, and **Reset demo** buttons use the real local project files and local Ollama service. The History view shows a local repair audit trail with timestamps, targets, statuses, model, attempts, timing, return codes, and source hashes; the log intentionally does not store source code or prompts. The demo reset also works on a fresh clone because the original broken sample is kept in the tracked `fixtures/sample_bug.py` file; the reset creates the ignored `.bak` backup when needed. The voice hardware is intentionally optional in the UI; the project continues to support the offline Whisper path and CLI fallback when a microphone is available later.
-
-### Git hook installation after a GitHub clone
-
-Because `.git/hooks/` is not normally versioned by Git, the repository keeps a tracked hook source plus installers.
-
-Linux/macOS:
+### Step 2 — Start Voice Healer
 
 ```bash
-bash hooks/install.sh
+python skills/voice-healer/scripts/main.py
 ```
 
-Windows PowerShell:
+Say:
 
-```powershell
-.\hooks\install.ps1
+```text
+heal sample_bug.py
 ```
 
-Each installer copies `hooks/pre-commit` into the active repository's `.git/hooks/pre-commit`.
+### Step 3 — Explain the local AI
 
-## Safe Patch Review
+Point out:
 
-The browser Lab is approval-gated by design. The Lab also renders a repair lifecycle so a reviewer can see whether the run is analyzing, proposing, awaiting approval, applying, verifying, or in a terminal verified/restored/rejected state. Selecting **Propose repair** runs the current target and asks the local Ollama model for a candidate patch without writing it to the target. The UI shows the unified diff and waits for an explicit **Approve & apply** or **Reject** action. Approval is protected by a source SHA-256 check; if the target changes after proposal, the patch is rejected and a new proposal is required. Approved changes are backed up and verified, with automatic restoration if verification fails. CLI and pre-commit automation retain the non-interactive self-healing path for trusted local workflows.
+```text
+[Ollama]
+qwen2.5-coder:1.5b
+```
+
+The repair request is sent to the local Ollama service.
+
+### Step 4 — Show verification
+
+The harness should report successful verification only after the repaired program executes successfully.
+
+### Step 5 — Show the browser Lab
+
+Open the local web interface and demonstrate:
+
+```text
+Overview → Lab → Source → History → Doctor
+```
+
+### Step 6 — Show the Git gate
+
+Demonstrate the pre-commit hook using a staged Python test file.
+
+---
+
+# 🛠️ Troubleshooting
+
+## PyAudio is unavailable
+
+For a hardware-independent test:
+
+```bash
+python skills/voice-healer/scripts/main.py --cli
+```
+
+For voice mode, install a compatible PyAudio build and make sure your operating system detects the microphone.
+
+---
+
+## Whisper is unavailable
+
+Install dependencies from:
+
+```text
+requirements.txt
+```
+
+The first Whisper model load may download model files. Later runs can use the locally cached model.
+
+---
+
+## Ollama is unreachable
+
+Start Ollama:
+
+```bash
+ollama serve
+```
+
+Then verify:
+
+```bash
+ollama list
+```
+
+Make sure:
+
+```text
+qwen2.5-coder:1.5b
+```
+
+is available.
+
+---
+
+## Repair keeps failing
+
+Inspect the original backup:
+
+```text
+sample_bug.py.bak
+```
+
+and review the traceback shown by the harness.
+
+When all configured repair attempts fail, the original program is intentionally restored.
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+Please read:
+
+```text
+CONTRIBUTING.md
+```
+
+before opening an issue or pull request.
+
+Useful contribution areas include:
+
+- Better voice command recognition
+- Additional programming-language support
+- More repair validation strategies
+- Additional Safety Guard rules
+- UI improvements
+- More test coverage
+- Agent Skills integrations
+- Developer workflow integrations
+
+---
+
+# 🔐 Security
+
+Please read:
+
+```text
+SECURITY.md
+```
+
+before reporting a security issue.
+
+The Safety Guard is a **defense-in-depth static analysis layer**, not a complete sandbox.
+
+Do not treat generated code as inherently safe merely because it passes the guard.
+
+---
+
+# 📄 License
+
+Voice Healer is released under the:
+
+**MIT License**
+
+See:
+
+```text
+LICENSE
+```
+
+---
+
+# 🌟 Project Links
+
+**Repository**
+
+https://github.com/Divasj007/voice-healer-agent
+
+**Agent Skills**
+
+https://agentskills.io/
+
+**Ollama**
+
+https://ollama.com/
+
+---
+
+<p align="center">
+  Built with Python, local AI, open-source tooling, and a lot of debugging.
+</p>
+
+<p align="center">
+  🎙️ <strong>Speak.</strong> 🧠 <strong>Repair.</strong> 🛡️ <strong>Review.</strong> ✅ <strong>Verify.</strong>
+</p>
