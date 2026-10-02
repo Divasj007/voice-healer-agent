@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOOK_PREFIX="[Pre-Commit]"
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"
+HEALER="$ROOT_DIR/skills/voice-healer/scripts/heal_code.py"
+
+if [[ ! -f "$HEALER" ]]; then
+  echo "$HOOK_PREFIX Self-healing harness not found at $HEALER" >&2
+  exit 1
+fi
+
+if [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
+  PYTHON_BIN="$ROOT_DIR/.venv/bin/python"
+elif [[ -x "$ROOT_DIR/.venv/Scripts/python.exe" ]]; then
+  PYTHON_BIN="$ROOT_DIR/.venv/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="$(command -v python3)"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_BIN="$(command -v python)"
+elif command -v py >/dev/null 2>&1; then
+  PYTHON_BIN="$(command -v py)"
+else
+  echo "$HOOK_PREFIX Python 3 is required to run the self-healing harness." >&2
+  exit 1
+fi
+
+TEST_FILES=()
+while IFS= read -r file; do
+  [[ -n "$file" ]] && TEST_FILES+=("$file")
+done < <(
+  git diff --cached --name-only --diff-filter=ACMR -- '*.py' |
+    awk '
+      /(^|\/)tests?\/.+\.py$/ || /(^|\/)(test_[^\/]*|[^\/]*_test)\.py$/ { print }
+    ' |
+    sort -u
+)
+
+if (( ${#TEST_FILES[@]} == 0 )); then
+  echo "$HOOK_PREFIX No staged Python test files detected; continuing."
+  exit 0
+fi
+
+echo "$HOOK_PREFIX Checking ${#TEST_FILES[@]} staged Python test file(s)."
+for file in "${TEST_FILES[@]}"; do
+  if [[ ! -f "$ROOT_DIR/$file" ]]; then
+    echo "$HOOK_PREFIX Skipping deleted file: $file"
+    continue
+  fi
+
+  if ! git diff --quiet -- "$file"; then
+    echo "$HOOK_PREFIX Commit blocked: $file has unstaged working-tree changes." >&2
+    echo "$HOOK_PREFIX Stage the exact version you want checked, then commit again." >&2
+    exit 1
+  fi
+
+  echo "$HOOK_PREFIX Healing/verifying: $file"
+  if ! "$PYTHON_BIN" "$HEALER" "$ROOT_DIR/$file"; then
+    echo "$HOOK_PREFIX Commit blocked: $file could not be verified or healed." >&2
+    exit 1
+  fi
+
+  git add -- "$file"
+  echo "$HOOK_PREFIX Re-staged verified/healed file: $file"
+done
+
+echo "$HOOK_PREFIX All staged Python tests passed self-healing verification."

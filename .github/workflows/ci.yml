@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Compile Python sources
+        run: python -m compileall -q skills tests sample_bug.py
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate shell scripts
+        run: bash -n hooks/pre-commit hooks/install.sh
+
+      - name: Validate browser JavaScript syntax
+        run: node --check ui/app.js
+
+      - name: Verify required repository files
+        run: |
+          test -f LICENSE
+          test -f README.md
+          test -f requirements.txt
+          test -f sample_bug.py
+          test -f hooks/pre-commit
+          test -f hooks/install.sh
+          test -f skills/voice-healer/SKILL.md
+          test -f skills/voice-healer/scripts/heal_code.py
+          test -f skills/voice-healer/scripts/listen_command.py
+          test -f skills/voice-healer/scripts/main.py
+          test -f skills/voice-healer/scripts/ui_server.py
+          test -f ui/index.html
+          test -f ui/app.js
+          test -f ui/styles.css

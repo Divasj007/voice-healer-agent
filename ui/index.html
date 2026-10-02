@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0b0a">
+  <meta name="description" content="Voice Healer — local AI developer agent with self-healing Python execution.">
+  <title>Voice Healer · Offline Developer Agent</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#overview" aria-label="Voice Healer home">
+      <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>
+        <strong>Voice Healer</strong>
+        <small>offline agent</small>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      <button class="nav-link active" data-view="overview">Overview</button>
+      <button class="nav-link" data-view="lab">Lab</button>
+      <button class="nav-link" data-view="source">Source</button>
+      <button class="nav-link" data-view="skill">Skill</button>
+      <button class="nav-link" data-view="history">History</button>
+      <button class="nav-link" data-view="doctor">Doctor</button>
+    </nav>
+    <div class="top-actions">
+      <span class="status-pill" id="headerStatus"><i></i> Checking local stack</span>
+      <button class="primary compact" data-view="lab">Open lab</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="view active" id="view-overview">
+      <div class="hero shell">
+        <div class="hero-copy">
+          <p class="eyebrow">Hacktoberfest · MLH · Local AI</p>
+          <h1>Speak.<br><em>It heals.</em></h1>
+          <p class="lead">A free, local-first developer agent that runs Python, catches failures, asks an open-weight coder model for a repair, and verifies the fix before accepting it.</p>
+          <div class="actions">
+            <button class="primary" data-view="lab">Open the lab <span>→</span></button>
+            <button class="secondary" data-view="source">Read the source</button>
+          </div>
+          <div class="trust-row">
+            <div><span class="dot online"></span> Ollama + urllib</div>
+            <div><span class="dot"></span> Whisper tiny on CPU</div>
+            <div><span class="dot"></span> CLI fallback</div>
+          </div>
+        </div>
+        <div class="terminal-card">
+          <div class="terminal-head"><span>illustrative / self-healing-flow</span><span class="live-dot">● DEMO</span></div>
+          <div class="terminal-body" id="heroTerminal"></div>
+        </div>
+      </div>
+
+      <div class="shell section">
+        <div class="section-kicker">Local architecture</div>
+        <h2>Every important hop stays on your machine.</h2>
+        <div class="cards four">
+          <article class="card"><span class="icon">◉</span><small>01 · INPUT</small><h3>Voice or CLI</h3><p>Whisper captures an optional spoken command. Manual text keeps the full workflow usable without a microphone.</p></article>
+          <article class="card"><span class="icon">⌁</span><small>02 · RUN</small><h3>Python subprocess</h3><p>The target is executed with bounded timeouts and captured stdout/stderr diagnostics.</p></article>
+          <article class="card"><span class="icon">✦</span><small>03 · REPAIR</small><h3>Local coder model</h3><p>Ollama receives the traceback and source through its localhost REST API.</p></article>
+          <article class="card"><span class="icon">✓</span><small>04 · VERIFY</small><h3>Patch, then prove</h3><p>The candidate is syntax-checked, written atomically, executed again, and rolled back if repair fails.</p></article>
+        </div>
+      </div>
+
+      <div class="band">
+        <div class="shell section">
+          <div class="section-kicker">Live demo</div>
+          <h2>One TypeError. One local repair loop.</h2>
+          <div class="demo-grid">
+            <div class="demo-step"><b>0:00</b><strong>Show the bug</strong><span>Run <code>sample_bug.py</code>.</span></div>
+            <div class="demo-step"><b>0:20</b><strong>Let it fail</strong><span>Capture the traceback and backup.</span></div>
+            <div class="demo-step"><b>0:40</b><strong>Propose repair</strong><span>Ollama generates a candidate without changing the file.</span></div>
+            <div class="demo-step"><b>1:00</b><strong>Approve &amp; prove</strong><span>Review the diff, approve it, then rerun the file.</span></div>
+          </div>
+          <button class="secondary" data-view="lab">Replay it in the lab →</button>
+        </div>
+      </div>
+
+      <div class="shell section skill-banner">
+        <div>
+          <div class="section-kicker">Agent Skills open standard</div>
+          <h2>Orchestrators know when to fire.</h2>
+          <p><code>skills/voice-healer/SKILL.md</code> carries the skill metadata and activation triggers, while the bundled scripts perform the work.</p>
+        </div>
+        <button class="secondary" data-view="skill">Read SKILL.md</button>
+      </div>
+    </section>
+
+    <section class="view" id="view-lab">
+      <div class="shell section lab-layout">
+        <div class="lab-heading">
+          <div><p class="eyebrow">Interactive lab</p><h1>Run it. Break it. Heal it.</h1><p class="lead small">The buttons below hit the real local Python harness and Ollama instance. No fake model response is used.</p></div>
+          <div class="status-stack" id="statusStack"></div>
+        </div>
+        <div class="lab-toolbar">
+          <label>Target
+            <select id="fileSelect" aria-label="Python target file"></select>
+          </label>
+          <div class="toolbar-actions">
+            <button class="secondary" id="runButton">▶ Run</button>
+            <button class="primary" id="healButton">✦ Propose repair</button>
+            <button class="ghost" id="resetButton">↺ Reset demo</button>
+          </div>
+        </div>
+        <div class="lab-grid">
+          <article class="panel code-panel">
+            <div class="panel-head"><span id="codeTitle">sample_bug.py</span><span class="badge" id="codeBadge">—</span></div>
+            <div class="code-wrap"><pre id="sourceCode"></pre></div>
+          </article>
+          <article class="panel log-panel">
+            <div class="panel-head"><span>Agent trace</span><span class="mono" id="traceTiming">idle</span></div>
+            <div class="log-wrap" id="logs" aria-live="polite"></div>
+          </article>
+        </div>
+        <div class="diff-grid">
+          <article class="panel">
+            <div class="panel-head"><span>Before / backup</span><span class="mono" id="backupState">—</span></div>
+            <pre class="code-wrap static-code" id="backupCode"></pre>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><span>Current verified source</span><span class="mono" id="verifiedState">—</span></div>
+            <pre class="code-wrap static-code" id="verifiedCode"></pre>
+          </article>
+        </div>
+        <article class="panel approval-panel" id="approvalPanel" hidden>
+          <div class="panel-head"><span>Human approval required</span><span class="mono" id="approvalState">pending</span></div>
+          <p class="approval-copy">The model has proposed a patch, but nothing has been written yet. Review the diff and the Safety Guard result, then explicitly approve or reject it.</p>
+          <div class="safety-guard" id="safetyGuard" hidden>
+            <div class="safety-guard-head"><div><span class="safety-kicker">Safety Guard</span><strong id="safetySummary">Checking proposed patch…</strong></div><span class="history-status" id="safetyBadge">not evaluated</span></div>
+            <div class="safety-findings" id="safetyFindings"></div>
+          </div>
+          <div class="approval-actions">
+            <button class="primary" id="approveButton">✓ Approve &amp; apply</button>
+            <button class="secondary" id="rejectButton">✕ Reject</button>
+          </div>
+        </article>
+        <article class="panel diff-panel">
+          <div class="panel-head"><span>Unified repair diff</span><span class="mono" id="diffState">—</span></div>
+          <pre class="code-wrap diff-code" id="diffCode">(no repair diff yet)</pre>
+        </article>
+        <article class="panel lifecycle-panel">
+          <div class="panel-head"><span>Repair lifecycle</span><span class="mono" id="lifecycleState">idle</span></div>
+          <div class="lifecycle-steps" id="lifecycleSteps"></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="view" id="view-source">
+      <div class="shell section source-layout">
+        <div class="section-kicker">Repository source</div>
+        <h1>Small pieces. Real local behavior.</h1>
+        <p class="lead small">Inspect the exact Python implementation behind the demo. Nothing on this page is a substitute backend.</p>
+        <div class="source-grid">
+          <aside class="panel source-list" id="sourceList"></aside>
+          <article class="panel source-viewer">
+            <div class="panel-head"><span id="sourcePath">sample_bug.py</span><span class="mono">UTF-8</span></div>
+            <pre class="code-wrap" id="fullSource"></pre>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-history">
+      <div class="shell section history-layout">
+        <div class="history-heading">
+          <div><p class="eyebrow">Local audit trail</p><h1>Repair history.</h1><p class="lead small">Each repair is shown as one grouped history item, with its detailed audit events available on demand. The local log stores metadata such as target, status, model, timing, and source hashes; source code is not written to the history log.</p></div>
+          <button class="secondary" id="historyRefresh">↻ Refresh</button>
+        </div>
+        <div class="history-summary" id="historySummary"></div>
+        <div class="history-list" id="historyList"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-doctor">
+      <div class="shell section doctor-layout">
+        <div class="history-heading">
+          <div><p class="eyebrow">Local preflight</p><h1>System doctor.</h1><p class="lead small">Check the exact runtime pieces that the local agent depends on. The doctor is read-only and never edits source files.</p></div>
+          <button class="secondary" id="doctorRefresh">↻ Run diagnostics</button>
+        </div>
+        <div class="doctor-banner" id="doctorBanner">Waiting for diagnostics…</div>
+        <div class="doctor-grid" id="doctorChecks"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-skill">
+      <div class="shell section skill-layout">
+        <div class="section-kicker">Agent Skills</div>
+        <h1>voice-healer/SKILL.md</h1>
+        <p class="lead small">The skill definition is served directly from this repository so the UI and orchestrator are looking at the same file.</p>
+        <div class="skill-grid">
+          <article class="panel skill-meta">
+            <div class="meta-row"><span>Name</span><code>voice-healer</code></div>
+            <div class="meta-row"><span>Compatibility</span><span>Python 3.10+ · local Ollama · optional microphone</span></div>
+            <div class="meta-row"><span>Activation</span><span>Heal, repair, debug, run Python; safe local Git actions.</span></div>
+            <div class="meta-row"><span>Offline boundary</span><span>Runtime inference, speech, execution, and Git workflow stay local.</span></div>
+          </article>
+          <article class="panel skill-viewer"><div class="panel-head"><span>SKILL.md</span><span class="mono">standard manifest</span></div><pre class="code-wrap" id="skillSource"></pre></article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="shell"><span>Voice Healer · MIT · 2026</span><span class="mono">qwen2.5-coder:1.5b · whisper tiny · local-first</span></div></footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>

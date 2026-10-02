@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.bak
+*.log
+.coverage
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.DS_Store
+Thumbs.db
+.voice-healer/
+.voice-healer/pending_repair.json
